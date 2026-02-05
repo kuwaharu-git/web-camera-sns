@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
+import { FaCamera, FaVideo, FaRedo, FaDownload, FaTwitter, FaShareAlt } from 'react-icons/fa'
 
 const HASHTAG = '#LiveFx'; // アプリ側で指定するハッシュタグ
 
@@ -157,7 +158,7 @@ function App() {
 
   return (
     <div className="app">
-      <h1>📷 Web Camera SNS</h1>
+      <h1><FaCamera /> Web Camera SNS</h1>
       
       {error && (
         <div className="error-message">
@@ -168,7 +169,7 @@ function App() {
       {!isCameraActive && !capturedImage && (
         <div className="start-screen">
           <button onClick={startCamera} className="start-button">
-            カメラを起動
+            <FaVideo /> カメラを起動
           </button>
         </div>
       )}
@@ -186,7 +187,7 @@ function App() {
           <canvas ref={canvasRef} style={{ display: 'none' }} />
           <div className="controls">
             <button onClick={capturePhoto} className="shutter-button">
-              📸 シャッター
+              <FaCamera /> 撮影
             </button>
           </div>
         </div>
@@ -197,16 +198,16 @@ function App() {
           <img src={capturedImage} alt="Captured" className="captured-image" />
           <div className="preview-controls">
             <button onClick={retakePhoto} className="retake-button">
-              🔄 撮り直す
+              <FaRedo /> 撮り直す
             </button>
             <button onClick={downloadPhoto} className="download-button">
-              💾 ダウンロード
+              <FaDownload /> 保存
             </button>
             <button onClick={downloadAndPostToX} className="post-button">
-              💾🐦 保存してXに投稿
+              <FaTwitter /> 保存してXに投稿
             </button>
             <button onClick={shareToX} className="post-button">
-              📤 SNSで共有
+              <FaShareAlt /> 共有
             </button>
           </div>
           <p className="hashtag-info">ハッシュタグ: {HASHTAG}</p>
