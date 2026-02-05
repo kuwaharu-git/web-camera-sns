@@ -181,8 +181,6 @@ function App() {
             autoPlay
             playsInline
             className="video-feed"
-            width={320}
-            height={240}
           />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
           <div className="controls">
