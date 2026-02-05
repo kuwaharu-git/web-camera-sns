@@ -128,6 +128,19 @@ function App() {
     link.click();
   };
 
+  // 保存してXに投稿
+  const downloadAndPostToX = () => {
+    if (!capturedImage) return;
+    
+    // 画像をダウンロード
+    downloadPhoto();
+    
+    // ハッシュタグ付きのX投稿画面を開く
+    const tweetText = encodeURIComponent(HASHTAG);
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+    window.open(twitterUrl, '_blank', 'width=550,height=420');
+  };
+
   // コンポーネントのクリーンアップ
   useEffect(() => {
     return () => {
@@ -188,6 +201,9 @@ function App() {
             </button>
             <button onClick={downloadPhoto} className="download-button">
               💾 ダウンロード
+            </button>
+            <button onClick={downloadAndPostToX} className="post-button">
+              💾🐦 保存してXに投稿
             </button>
             <button onClick={shareToX} className="post-button">
               📤 SNSで共有
