@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
 
-const HASHTAG = '#WebCameraSNS'; // アプリ側で指定するハッシュタグ
+const HASHTAG = '#LiveFx'; // アプリ側で指定するハッシュタグ
 
 function App() {
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -22,12 +22,14 @@ function App() {
         },
         audio: false
       });
-      
+
+      streamRef.current = stream;
+      setIsCameraActive(true);
+      setError(null);
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsCameraActive(true);
-        setError(null);
+        void videoRef.current.play().catch(() => {});
       }
     } catch (err) {
       setError('カメラへのアクセスに失敗しました。カメラの使用を許可してください。');
@@ -40,6 +42,9 @@ function App() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setIsCameraActive(false);
   };
@@ -85,6 +90,34 @@ function App() {
     alert('写真をスクリーンショットまたはダウンロードして、Twitterの投稿に添付してください。');
   };
 
+  // 共有シートからXへ投稿（対応端末のみ）
+  const shareToX = async () => {
+    if (!capturedImage) return;
+
+    if (!navigator.share || !navigator.canShare) {
+      postToTwitter();
+      return;
+    }
+
+    const response = await fetch(capturedImage);
+    const blob = await response.blob();
+    const file = new File([blob], `photo-${Date.now()}.png`, { type: 'image/png' });
+
+    if (!navigator.canShare({ files: [file] })) {
+      postToTwitter();
+      return;
+    }
+
+    try {
+      await navigator.share({
+        text: HASHTAG,
+        files: [file]
+      });
+    } catch (err) {
+      console.error('Share error:', err);
+    }
+  };
+
   // 写真をダウンロード
   const downloadPhoto = () => {
     if (!capturedImage) return;
@@ -101,6 +134,13 @@ function App() {
       stopCamera();
     };
   }, []);
+
+  useEffect(() => {
+    if (isCameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      void videoRef.current.play().catch(() => {});
+    }
+  }, [isCameraActive]);
 
   return (
     <div className="app">
@@ -127,6 +167,8 @@ function App() {
             autoPlay
             playsInline
             className="video-feed"
+            width={320}
+            height={240}
           />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
           <div className="controls">
@@ -147,8 +189,8 @@ function App() {
             <button onClick={downloadPhoto} className="download-button">
               💾 ダウンロード
             </button>
-            <button onClick={postToTwitter} className="post-button">
-              🐦 X(Twitter)に投稿
+            <button onClick={shareToX} className="post-button">
+              📤 SNSで共有
             </button>
           </div>
           <p className="hashtag-info">ハッシュタグ: {HASHTAG}</p>
