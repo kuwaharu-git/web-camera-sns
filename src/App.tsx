@@ -119,23 +119,66 @@ function App() {
     }
   };
 
-  // 写真をダウンロード
-  const downloadPhoto = () => {
+  // 写真ファイルをダウンロード（PC向け）
+  const downloadFile = () => {
     if (!capturedImage) return;
-    
+
     const link = document.createElement('a');
     link.href = capturedImage;
     link.download = `photo-${Date.now()}.png`;
     link.click();
   };
 
-  // 保存してXに投稿
-  const downloadAndPostToX = () => {
+  // 写真を保存（スマホは共有シート、非対応はダウンロード）
+  const savePhoto = async () => {
     if (!capturedImage) return;
-    
-    // 画像をダウンロード
-    downloadPhoto();
-    
+
+    if (navigator.share && navigator.canShare) {
+      const response = await fetch(capturedImage);
+      const blob = await response.blob();
+      const file = new File([blob], `photo-${Date.now()}.png`, { type: 'image/png' });
+
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: '保存'
+          });
+          return;
+        } catch (err) {
+          console.error('Share error:', err);
+        }
+      }
+    }
+
+    downloadFile();
+  };
+
+  // 保存してXに投稿
+  const downloadAndPostToX = async () => {
+    if (!capturedImage) return;
+
+    if (navigator.share && navigator.canShare) {
+      const response = await fetch(capturedImage);
+      const blob = await response.blob();
+      const file = new File([blob], `photo-${Date.now()}.png`, { type: 'image/png' });
+
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            text: HASHTAG,
+            files: [file]
+          });
+          return;
+        } catch (err) {
+          console.error('Share error:', err);
+        }
+      }
+    }
+
+    // 画像をダウンロード（PC向け）
+    downloadFile();
+
     // ハッシュタグ付きのX投稿画面を開く
     const tweetText = encodeURIComponent(HASHTAG);
     const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
@@ -198,7 +241,7 @@ function App() {
             <button onClick={retakePhoto} className="retake-button">
               <FaRedo /> 撮り直す
             </button>
-            <button onClick={downloadPhoto} className="download-button">
+            <button onClick={savePhoto} className="download-button">
               <FaDownload /> 保存
             </button>
             <button onClick={downloadAndPostToX} className="post-button">
