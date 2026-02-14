@@ -118,6 +118,15 @@ function App() {
     startCamera();
   };
 
+  const downloadVideo = () => {
+    if (!recordedVideoBlob || !recordedVideoUrl) return;
+    const link = document.createElement('a');
+    link.href = recordedVideoUrl;
+    link.download = `video-${Date.now()}.webm`;
+    link.click();
+    link.remove();
+  };
+
   // X(Twitter)に投稿
   const postToTwitter = () => {
     if (!recordedVideoBlob) return;
@@ -243,6 +252,9 @@ function App() {
           <div className="preview-controls">
             <button onClick={retakeVideo} className="retake-button">
               <FaRedo /> 撮り直す
+            </button>
+            <button onClick={downloadVideo} className="download-button">
+              <FaVideo /> 保存
             </button>
             <button onClick={shareToX} className="post-button">
               <FaShareAlt /> 共有
