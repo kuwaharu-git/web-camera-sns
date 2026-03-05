@@ -15,17 +15,55 @@ function App() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+
+  const loadDevices = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+      let deviceList = await navigator.mediaDevices.enumerateDevices();
+      let videoInputs = deviceList.filter(d => d.kind === 'videoinput');
+
+      // If labels are empty (no permission granted), prompt briefly to get permission so labels become available
+      const labelsAvailable = videoInputs.some(d => d.label && d.label.length > 0);
+      if (!labelsAvailable) {
+        try {
+          const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          tempStream.getTracks().forEach(t => t.stop());
+          deviceList = await navigator.mediaDevices.enumerateDevices();
+          videoInputs = deviceList.filter(d => d.kind === 'videoinput');
+        } catch (err) {
+          // ignore — user may have denied permission; we still show devices (labels may be blank)
+        }
+      }
+
+      setDevices(videoInputs);
+      if (!selectedDeviceId && videoInputs[0]) {
+        setSelectedDeviceId(videoInputs[0].deviceId);
+      }
+    } catch (err) {
+      console.error('Failed to enumerate devices', err);
+    }
+  };
+
   // カメラの起動
   const startCamera = async () => {
     try {
+      const videoConstraints: MediaTrackConstraints = selectedDeviceId
+        ? { deviceId: { exact: selectedDeviceId } }
+        : {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          };
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment', // スマートフォンの背面カメラを優先
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
+        video: videoConstraints,
         audio: true
       });
+
+      // Refresh device list after permission granted
+      void loadDevices();
 
       streamRef.current = stream;
       setIsCameraActive(true);
@@ -185,6 +223,21 @@ function App() {
     };
   }, []);
 
+  // 初回マウントでデバイスを列挙
+  useEffect(() => {
+    void loadDevices();
+  }, []);
+
+  // 選択デバイスが変わったらカメラを再起動（起動中の場合）
+  useEffect(() => {
+    if (isCameraActive && selectedDeviceId) {
+      // restart camera with new device
+      stopCamera();
+      void startCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeviceId]);
+
   useEffect(() => {
     if (isCameraActive && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
@@ -212,6 +265,23 @@ function App() {
 
       {!isCameraActive && !recordedVideoUrl && (
         <div className="start-screen">
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ marginRight: 8 }}>カメラを選択:</label>
+            <select
+              value={selectedDeviceId ?? ''}
+              onChange={e => setSelectedDeviceId(e.target.value || null)}
+            >
+              {devices.length === 0 && <option value="">検出されません</option>}
+              {devices.map((d, idx) => (
+                <option key={d.deviceId || idx} value={d.deviceId}>
+                  {d.label || `カメラ ${idx + 1}`}
+                </option>
+              ))}
+            </select>
+            <button onClick={() => void loadDevices()} style={{ marginLeft: 8 }}>
+              更新
+            </button>
+          </div>
           <button onClick={startCamera} className="start-button">
             <FaVideo /> カメラを起動
           </button>
@@ -226,6 +296,22 @@ function App() {
             playsInline
             className="video-feed"
           />
+          <div style={{ marginTop: 8 }}>
+            <label style={{ marginRight: 8 }}>カメラ:</label>
+            <select
+              value={selectedDeviceId ?? ''}
+              onChange={e => setSelectedDeviceId(e.target.value || null)}
+            >
+              {devices.map((d, idx) => (
+                <option key={d.deviceId || idx} value={d.deviceId}>
+                  {d.label || `カメラ ${idx + 1}`}
+                </option>
+              ))}
+            </select>
+            <button onClick={() => void loadDevices()} style={{ marginLeft: 8 }}>
+              再読み込み
+            </button>
+          </div>
           <div className="controls">
             {!isRecording && (
               <button onClick={startRecording} className="shutter-button">
